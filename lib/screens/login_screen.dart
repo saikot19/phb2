@@ -14,6 +14,25 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    checkLoginStatus();
+  }
+
+  /// Check if the user is already logged in
+  Future<void> checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? userCode = prefs.getString("userCode");
+
+    if (userCode != null) {
+      // User already logged in, navigate to HomeScreen
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => HomeScreen()));
+    }
+  }
+
+  /// Handles login API request
   Future<void> login() async {
     String url = "https://home.cdipbd.org/api/v1/login-check";
     Map<String, String> headers = {"Content-Type": "application/json"};
@@ -21,10 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
       "employee_id": _employeeIdController.text,
       "pass": _passwordController.text
     };
-
-    print("Login URL: $url");
-    print("Request Headers: $headers");
-    print("Request Body: ${jsonEncode(body)}");
 
     setState(() {
       _isLoading = true;
@@ -34,16 +49,11 @@ class _LoginScreenState extends State<LoginScreen> {
       final response = await http.post(Uri.parse(url),
           headers: headers, body: jsonEncode(body));
 
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
-
       if (response.statusCode == 200) {
         Map<String, dynamic> data = jsonDecode(response.body);
-        print("Decoded Response: $data");
 
         if (data["status"] == "200") {
           await saveUserData(data);
-          print("User data saved successfully.");
           Navigator.pushReplacement(
               context, MaterialPageRoute(builder: (context) => HomeScreen()));
         } else {
@@ -53,7 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
         showError("Server error: ${response.statusCode}");
       }
     } catch (e) {
-      print("Network error: $e");
       showError("Network error: $e");
     }
 
@@ -62,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  /// Saves user data into SharedPreferences
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString("userCode", userData["userCode"]);
@@ -69,11 +79,10 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.setString("userName", userData["userName"]);
     await prefs.setString("userPhone", userData["userPhone"]);
     await prefs.setString("userEmail", userData["userEmail"]);
-    print("Saved User Data: ${jsonEncode(userData)}");
   }
 
+  /// Shows an error message as a SnackBar
   void showError(String message) {
-    print("Error: $message");
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
@@ -81,32 +90,93 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Login")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _employeeIdController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: "Employee ID"),
+      backgroundColor: Colors.blue.shade50,
+      body: Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Logo
+                  // Employee ID Field
+                  TextField(
+                    controller: _employeeIdController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Employee ID",
+                      prefixIcon: Icon(Icons.person, color: Colors.blue),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  SizedBox(height: 15),
+
+                  // Password Field
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      prefixIcon: Icon(Icons.lock, color: Colors.blue),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+
+                  // Square Login Button
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : login,
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        backgroundColor: Colors.blue.shade700,
+                        shadowColor: Colors.blue.shade300,
+                        elevation: 5,
+                      ),
+                      child: Text(
+                        "Login",
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 15),
+
+                  // Forgot Password
+                  TextButton(
+                    onPressed: () {
+                      print("Forgot Password Clicked");
+                    },
+                    child: Text("Forgot Password?",
+                        style: TextStyle(color: Colors.blue)),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 10),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: "Password"),
+          ),
+
+          // Full-screen loading indicator
+          if (_isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black54,
+                child: Center(child: CircularProgressIndicator()),
+              ),
             ),
-            SizedBox(height: 20),
-            _isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-              onPressed: login,
-              child: Text("Login"),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
