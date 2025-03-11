@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class EmployeeListScreen extends StatefulWidget {
   final int unitId;
@@ -13,7 +16,7 @@ class EmployeeListScreen extends StatefulWidget {
 }
 
 class _EmployeeListScreenState extends State<EmployeeListScreen> {
-  Map<String, String> staffPhotos = {};
+  List<EmployeePhoto> employeePhotos = [];
   final String apiUrl = "https://home.cdipbd.org/api/v1/staff-photo"; // API URL
 
   @override
@@ -33,16 +36,14 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
           List<dynamic> staffList = decodedData['photo'];
 
           setState(() {
-            staffPhotos = {
-              for (var staff in staffList)
-                if (staff["user_id"] != null && staff["user_photo"] != null && staff["user_photo"].toString().isNotEmpty)
-                  staff["user_id"].toString(): "https://home.cdipbd.org/${staff["user_photo"]}"
-            };
-          });
-
-          // Debug log to verify ID mapping
-          staffPhotos.forEach((key, value) {
-            print("Mapped Employee ID: $key -> Image URL: $value");
+            employeePhotos = staffList
+                .where((staff) =>
+            staff["user_id"] != null && staff["user_photo"] != null && staff["user_photo"].toString().isNotEmpty)
+                .map((staff) => EmployeePhoto(
+              userId: staff["user_id"].toString().trim(),
+              imageUrl: "https://home.cdipbd.org/${staff["user_photo"]}",
+            ))
+                .toList();
           });
         }
       } else {
@@ -53,13 +54,20 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
     }
   }
 
+  String? _getImageUrlForEmployee(String empId) {
+    for (var photo in employeePhotos) {
+      if (photo.userId == empId) {
+        return photo.imageUrl;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     List<dynamic> filteredEmployees = widget.allStaff.where((staff) {
       return staff["unit_id"] == widget.unitId;
     }).toList();
-
-    print("Filtered Employee List for Unit ${widget.unitId}: $filteredEmployees");
 
     return Scaffold(
       appBar: AppBar(
@@ -80,18 +88,8 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
           itemCount: filteredEmployees.length,
           itemBuilder: (context, index) {
             var employee = filteredEmployees[index];
-            String empId = employee["emp_id"].toString().trim();  // Ensure trimming spaces
-            String? imageUrl = staffPhotos[empId];
-
-            // Debugging ID Mapping
-            print("Checking ID Mapping - Staff ID: '$empId', Available Photo IDs: ${staffPhotos.keys}");
-
-            if (!staffPhotos.containsKey(empId)) {
-              print("No match found for Employee ID: $empId");
-            }
-
-            // Debugging individual employee details
-            print("Rendering Employee - ID: $empId, Name: ${employee["emp_name_eng"]}, Image URL: $imageUrl");
+            String empId = employee["emp_id"].toString();
+            String? imageUrl = _getImageUrlForEmployee(empId);
 
             return Card(
               shape: RoundedRectangleBorder(
@@ -133,6 +131,9 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                     ),
                   ],
                 ),
+                onTap: () {
+                  showStaffOptionsDialog(context, employee["staff_phone"], employee["staff_email"]);
+                },
               ),
             );
           },
@@ -140,4 +141,60 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
       ),
     );
   }
+
+  void showStaffOptionsDialog(BuildContext context, String? phoneNumber, String? email) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Choose an Action"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.copy),
+                title: Text("Copy"),
+                onTap: () {
+                  if (phoneNumber != null && phoneNumber.isNotEmpty) {
+                    Clipboard.setData(ClipboardData(text: phoneNumber));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Phone number copied!")),
+                    );
+                  }
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.call),
+                title: Text("Call"),
+                onTap: () {
+                  if (phoneNumber != null && phoneNumber.isNotEmpty) {
+                    launchUrl(Uri.parse("tel:$phoneNumber"));
+                  }
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.email),
+                title: Text("Email"),
+                onTap: () {
+                  if (email != null && email.isNotEmpty) {
+                    launchUrl(Uri.parse("mailto:$email"));
+                  }
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class EmployeePhoto {
+  final String userId;
+  final String imageUrl;
+
+  EmployeePhoto({required this.userId, required this.imageUrl});
 }
