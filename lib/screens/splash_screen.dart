@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'dart:async';
-
-import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../model/user_model.dart'; // Import your UserModel
 import 'login_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -37,9 +37,11 @@ class _SplashScreenState extends State<SplashScreen> {
     String? userCode = prefs.getString("userCode");
 
     if (userCode != null && userCode.isNotEmpty) {
+      // User already logged in, navigate to HomeScreen
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => HomeScreen()));
     } else {
+      // Navigate to LoginScreen
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => LoginScreen()));
     }
@@ -52,9 +54,12 @@ class _SplashScreenState extends State<SplashScreen> {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue.shade700, Colors.blue.shade300],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            colors: [
+              const Color.fromARGB(255, 235, 233, 149),
+              Colors.blue.shade300
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
         child: Column(
