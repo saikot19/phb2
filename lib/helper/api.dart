@@ -72,6 +72,29 @@ class ApiService {
     }
   }
 
+  // Fetch employees by unit ID
+  Future<List<dynamic>> fetchEmployeesByUnit(int unitId) async {
+    String url = "$baseUrl/employees-by-unit/$unitId";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        var decodedData = jsonDecode(response.body);
+
+        if (decodedData is List<dynamic>) {
+          return decodedData;
+        } else {
+          throw Exception('Invalid API response format.');
+        }
+      } else {
+        throw Exception("Failed to fetch employees: ${response.body}");
+      }
+    } catch (e) {
+      throw Exception("Error fetching employees: $e");
+    }
+  }
+
   // Save user data to SharedPreferences
   Future<void> saveUserData(Map<String, dynamic> userData) async {
     try {

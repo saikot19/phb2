@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phb2/model/user_model.dart'; // Import your UserModel
+import '../model/user_model.dart'; // Import your UserModel
 import 'employee_list_screen.dart';
 
 class UnitListScreen extends StatelessWidget {
@@ -18,8 +18,8 @@ class UnitListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Access the UserModel using Provider
-    final userModel = Provider.of<UserModel>(context);
+    // Access the UserModel using Provider (if needed in the future)
+    final userModel = Provider.of<UserModel>(context, listen: false);
 
     // Filter units based on departmentID
     List<dynamic> filteredUnits =
@@ -64,13 +64,15 @@ class UnitListScreen extends StatelessWidget {
                       trailing: Icon(Icons.arrow_forward_ios,
                           color: Colors.blueAccent),
                       onTap: () {
-                        Navigator.pushNamed(
+                        // Navigate to EmployeeListScreen
+                        Navigator.push(
                           context,
-                          '/employeeList',
-                          arguments: {
-                            'unitId': unit["id"],
-                            'allStaff': allStaff,
-                          },
+                          MaterialPageRoute(
+                            builder: (context) => EmployeeListScreen(
+                              unitId: unit["id"],
+                              allStaff: allStaff,
+                            ),
+                          ),
                         );
                       },
                     ),
